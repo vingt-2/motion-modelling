@@ -1,0 +1,258 @@
+class GuidedWarp(object):
+
+	def __init__(self):
+		self.evaluated_warp = []
+
+	def compute_warp(self, ref_motion_obj, in_motion_obj, paths=0):
+
+		# ref_triple = #([0.001*a for a in range(0,len(ref_motion_obj.trajectory))],
+		# upsampled_in_traj = np.zeros(2*len(ref_motion_obj.trajectory))
+		# for i in range(0,len(ref_motion_obj.trajectory)):
+		# 	upsampled_in_traj[(2*i)] = ref_motion_obj.trajectory[i]
+		# 	upsampled_in_traj[(2*i)+1] = ref_motion_obj.trajectory[i]
+
+		ref_triple = ([0*a/float(len(ref_motion_obj.trajectory)) for a in range(0,len(ref_motion_obj.trajectory))], ref_motion_obj.trajectory, ref_motion_obj.differentiate(order=1),ref_motion_obj.differentiate(order=2))
+
+		ref_features = np.array(zip(*ref_triple))
+
+		ref_feature_tree = KDTree(ref_features, leaf_size=15, metric='euclidean')
+
+		if paths == 0:
+			paths = min(len(in_motion_obj.trajectory),len(ref_motion_obj.trajectory))
+
+		warp = [0]
+		window_size = 15
+		graph = {}
+		for i in range(1,len(in_motion_obj.trajectory)):
+			next_states_i = {}
+			for j in range(i + 1,i + window_size + 1):
+				if j >= len(in_motion_obj.trajectory):
+					break
+
+				t = 0*i/float(len(in_motion_obj.trajectory))
+				pos = in_motion_obj.trajectory[i]
+				vel = pos - in_motion_obj.trajectory[i-1]
+				acc = in_motion_obj.trajectory[i-1] - 2*pos + in_motion_obj.trajectory[j]
+
+				dpoint = np.array([[t, pos, vel,acc]])
+
+				knn = ref_feature_tree.query(dpoint, 10, return_distance=True)
+				distances = knn[0]
+				dpoint_val = np.average(distances)
+
+				next_states_i[j] = dpoint_val
+
+			graph[i] = next_states_i
+
+		nodes = graph.keys()
+
+		P_mins = [np.zeros(len(nodes))]
+		last_shortest_distances = np.zeros((len(nodes),len(nodes)))
+		for p in range(1,paths):
+			shortest_distances = np.zeros((len(nodes),len(nodes))) + np.float('inf')
+
+			min_indices = []
+
+			for from_n in range(0,len(nodes)):
+				to_nodes = graph[nodes[from_n]]
+
+				min_to_get_to_node = np.argmin(last_shortest_distances[:,from_n])
+				min_indices.append(min_to_get_to_node)
+
+				for to_node in to_nodes:
+					to_n = nodes.index(to_node)
+					shortest_distances[from_n,to_n] = graph[nodes[from_n]][to_node] + last_shortest_distances[min_to_get_to_node,from_n]
+
+			last_shortest_distances = shortest_distances
+			P_mins.append(min_indices)
+
+		path = [len(in_motion_obj.trajectory)-2]
+
+		inv_path_indices = range(0,paths)
+		inv_path_indices.reverse()
+
+		for p in inv_path_indices:
+			path.append(P_mins[p][path[-1]])
+
+		warp = path
+		warp.reverse()
+
+		self.evaluated_warp = warp
+		return True
+
+	def warp_motion(self, motion, interpolate=True):
+		warped_motion = np.zeros(len(self.evaluated_warp))
+
+		if interpolate:
+			for i in range(0,len(self.evaluated_warp)):
+				t = self.evaluated_warp[i]
+				f = int(np.floor(t))
+				c = min(int(np.ceil(t)),len(motion)-1)
+				vf = motion[f]
+				vc = motion[c]
+				warped_motion[i] = float(np.interp([t], [f, c], [vf, vc]))
+		else:
+			warped_motion = np.array([motion[int(t)] for t in self.evaluated_warp])
+
+		return warped_motion
+
+	def invert_warp(self, warp, motion_range=()):
+		inted_warp = [int(w) for w in warp]
+
+		(start, end) = (inted_warp[0], inted_warp[-1]) # from monotic property
+
+		if motion_range!=():
+			(start, end) = (max(start,motion_range[0]), min(end,motion_range[1]))
+
+		inv_warp = np.zeros(end-start)
+		interpolate = []
+		for i in range(start,end):
+			try:
+				inv_warp_v = inted_warp.index(i)
+				inv_warp[i - start] = inv_warp_v
+			except ValueError:
+				# NOT VERY SMOOTH, be careful
+				interpolate.append(i-start)
+		for i in interpolate:
+			before = inv_warp[i-1]
+			after_indx = i+1
+			while after_indx in interpolate:
+				after_indx += 1
+			if after_indx == len(inv_warp):
+				inv_warp[i] = inv_warp[i-1]
+			else:
+				after = inv_warp[after_indx]
+				inv_warp[i] = float(np.interp([i], [i-1, after_indx], [before, after]))
+
+		self.evaluated_warp = inv_warp
+
+class OnlineWarp(object):
+
+	def __init__(self):
+		self.evaluated_warp = []
+		self.current_graph = {}
+		self.ref_tree = None
+		self.P_mins = []
+		self.last_shortest_distances = np.array([[0]])
+
+	def build_ref_tree(self,ref_motion_obj):
+		ref_triple = (
+		ref_motion_obj.trajectory, ref_motion_obj.differentiate(order=1), ref_motion_obj.differentiate(order=2))
+
+		ref_features = np.array(zip(*ref_triple))
+
+		self.ref_tree = KDTree(ref_features, leaf_size=15, metric='euclidean')
+
+	def compute_warp(self, ref_motion_obj, in_motion_obj, paths=0):
+
+		if paths == 0:
+			paths = min(len(in_motion_obj.trajectory),len(ref_motion_obj.trajectory))
+
+		warp = [0]
+		window_size = 1
+
+		for i in range(1 + len(self.current_graph) - window_size, len(in_motion_obj.trajectory)):
+			next_states_i = {}
+			for j in range(i + 1,i + window_size + 1):
+				if j >= len(in_motion_obj.trajectory):
+					break
+
+				t = i
+				pos = in_motion_obj.trajectory[i]
+				vel = pos - in_motion_obj.trajectory[i-1]
+				acc = in_motion_obj.trajectory[i-1] - 2*pos + in_motion_obj.trajectory[j]
+
+				dpoint = np.array([[pos,vel,acc]])
+
+				knn = self.ref_tree.query(dpoint, 1, return_distance=True)
+				distances = knn[0]
+				dpoint_val = np.average(distances)
+
+				next_states_i[j] = dpoint_val
+
+			self.current_graph[i] = next_states_i
+
+		#warp = shortestPath(graph,2,len(in_motion_obj.trajectory)-1)
+		nodes = self.current_graph.keys()
+
+		last_shape = self.last_shortest_distances.shape
+		new_last_shortest_distances = np.zeros((len(nodes),len(nodes))) + np.float('inf')
+		new_last_shortest_distances[0:last_shape[0],0:last_shape[1]] = self.last_shortest_distances
+		self.last_shortest_distances = new_last_shortest_distances
+
+		for p in range(len(self.P_mins), paths):
+			shortest_distances = np.zeros((len(nodes),len(nodes))) + np.float('inf')
+
+			min_indices = []
+
+			for X_i in nodes:
+				i = nodes.index(X_i)
+				possible_X_js = self.current_graph[X_i]
+
+				min_to_get_to_X_i = np.argmin(self.last_shortest_distances[:,i])
+				min_indices.append(min_to_get_to_X_i)
+
+				for X_j in possible_X_js:
+					j = nodes.index(X_j)
+					shortest_distances[i, j] = self.current_graph[X_i][X_j] + self.last_shortest_distances[min_to_get_to_X_i, i]
+
+			self.last_shortest_distances = shortest_distances
+			self.P_mins.append(min_indices)
+
+		path = [len(in_motion_obj.trajectory)-2]
+		inv_path = range(0,paths)
+		inv_path.reverse()
+
+		for p in inv_path:
+			path.append(self.P_mins[p][path[-1]])
+
+		warp = path
+		warp.reverse()
+		self.evaluated_warp = warp
+		return True
+
+	def warp_motion(self, motion, interpolate=True):
+		warped_motion = np.zeros(len(self.evaluated_warp))
+
+		if interpolate:
+			for i in range(0,len(self.evaluated_warp)):
+				t = self.evaluated_warp[i]
+				f = int(np.floor(t))
+				c = min(int(np.ceil(t)),len(motion)-1)
+				vf = motion[f]
+				vc = motion[c]
+				warped_motion[i] = float(np.interp([t], [f, c], [vf, vc]))
+		else:
+			warped_motion = np.array([motion[int(t)] for t in self.evaluated_warp])
+
+		return warped_motion
+
+	def invert_warp(self, warp, motion_range=()):
+		inted_warp = [int(w) for w in warp]
+
+		(start, end) = (inted_warp[0], inted_warp[-1]) # from monotic property
+
+		if motion_range!=():
+			(start, end) = (max(start,motion_range[0]), min(end,motion_range[1]))
+
+		inv_warp = np.zeros(end-start)
+		interpolate = []
+		for i in range(start,end):
+			try:
+				inv_warp_v = inted_warp.index(i)
+				inv_warp[i - start] = inv_warp_v
+			except ValueError:
+				# NOT VERY SMOOTH, be careful
+				interpolate.append(i-start)
+		for i in interpolate:
+			before = inv_warp[i-1]
+			after_indx = i+1
+			while after_indx in interpolate:
+				after_indx += 1
+			if after_indx == len(inv_warp):
+				inv_warp[i] = inv_warp[i-1]
+			else:
+				after = inv_warp[after_indx]
+				inv_warp[i] = float(np.interp([i], [i-1, after_indx], [before, after]))
+
+		self.evaluated_warp = inv_warp
