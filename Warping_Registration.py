@@ -1,7 +1,6 @@
 import numpy as np
 from scipy import signal, interpolate
 import pyqtgraph as pg
-import dtw
 
 GAUSS_KERNEL = np.loadtxt("gauss_kernel.csv", delimiter=",")
 

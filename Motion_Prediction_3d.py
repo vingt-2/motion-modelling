@@ -2,8 +2,7 @@ import os, time
 from utils import qv_mult
 import pickle
 import numpy as np
-import PyQt4.QtGui as QtGui
-import PyQt4.QtCore as QtCore
+from PySide6 import QtGui, QtCore, QtWidgets
 import pyqtgraph as pg
 import pyqtgraph.opengl as pggl
 from scipy import interpolate, optimize, stats, signal
@@ -196,7 +195,7 @@ def _clear_plot(plot, plot_items):
 	plot_items.clear()
 
 
-class MotionEditionWidget(QtGui.QWidget):
+class MotionEditionWidget(QtWidgets.QWidget):
 	def __init__(self):
 
 		super(MotionEditionWidget, self).__init__()
@@ -215,17 +214,17 @@ class MotionEditionWidget(QtGui.QWidget):
 
 		self.plot_display = "markers"
 
-		self.motion_name_list = QtGui.QListWidget()
+		self.motion_name_list = QtWidgets.QListWidget()
 		self.motion_name_list.itemChanged.connect(self.motion_name_edit)
 		self.motion_name_list.currentItemChanged.connect(self.list_change_event)
 
-		self.markers_list = QtGui.QListWidget()
+		self.markers_list = QtWidgets.QListWidget()
 		self.markers_list.currentItemChanged.connect(self.markers_list_change_event)
 
 		self.persp_plot = pggl.GLViewWidget()
 		self.current_plot_items = []
 
-		self.trail_length_box = QtGui.QSpinBox()
+		self.trail_length_box = QtWidgets.QSpinBox()
 		self.trail_length_box.setValue(20)
 		self.trail_length_box.setMinimum(1)
 		self.trail_length_box.valueChanged.connect(self.trail_length_box_changed)
@@ -237,12 +236,12 @@ class MotionEditionWidget(QtGui.QWidget):
 		self.persp_plot.addItem(ygrid)
 		self.persp_plot.addItem(zgrid)
 
-		self.time_slider = QtGui.QSlider()
-		self.time_slider.setOrientation(QtCore.Qt.Vertical)
-		self.time_slider.setTickPosition(QtGui.QSlider.TicksAbove)
+		self.time_slider = QtWidgets.QSlider()
+		self.time_slider.setOrientation(QtCore.Qt.Orientation.Vertical)
+		self.time_slider.setTickPosition(QtWidgets.QSlider.TickPosition.TicksAbove)
 		self.time_slider.valueChanged.connect(self.slider_moved)
 
-		self.time_box = QtGui.QSpinBox()
+		self.time_box = QtWidgets.QSpinBox()
 		self.time_box.setValue(0)
 		self.time_box.setMinimum(0)
 		self.time_box.setMaximum(0)
@@ -252,57 +251,57 @@ class MotionEditionWidget(QtGui.QWidget):
 		self.time_series_plot_legend = self.time_series_plot.addLegend()
 		self.time_series_frame_line = self.time_series_plot.addLine(0)
 
-		self.layout = QtGui.QGridLayout()
+		self.layout = QtWidgets.QGridLayout()
 
-		self.show_bones_buttons = QtGui.QPushButton('Show Bones')
+		self.show_bones_buttons = QtWidgets.QPushButton('Show Bones')
 		self.show_bones_buttons.clicked.connect(self.show_bones)
 
-		self.derivative_button = QtGui.QPushButton('Delete Motion')
+		self.derivative_button = QtWidgets.QPushButton('Delete Motion')
 		self.derivative_button.clicked.connect(self.delete_motion_event)
 
-		self.remove_markers_button = QtGui.QPushButton('Only Keep common markers')
+		self.remove_markers_button = QtWidgets.QPushButton('Only Keep common markers')
 		self.remove_markers_button.clicked.connect(self.remove_markers)
 
-		self.clamp_s_button = QtGui.QPushButton('Clamp start')
+		self.clamp_s_button = QtWidgets.QPushButton('Clamp start')
 		self.clamp_s_button.clicked.connect(self.clamp_start)
 
-		self.clamp_e_button = QtGui.QPushButton('Clamp end')
+		self.clamp_e_button = QtWidgets.QPushButton('Clamp end')
 		self.clamp_e_button.clicked.connect(self.clamp_end)
 
-		self.kf_button = QtGui.QPushButton('Add Keyframe')
+		self.kf_button = QtWidgets.QPushButton('Add Keyframe')
 		self.kf_button.clicked.connect(self.add_kf_event)
 
-		self.split_motions_button = QtGui.QPushButton('Split Motions')
+		self.split_motions_button = QtWidgets.QPushButton('Split Motions')
 		self.split_motions_button.clicked.connect(self.split_motions_event)
 
-		self.spit_out_twist_button = QtGui.QPushButton('Dump n^squared Twists')
+		self.spit_out_twist_button = QtWidgets.QPushButton('Dump n^squared Twists')
 		self.spit_out_twist_button.clicked.connect(self.write_twist_trajectories)
 
-		self.dump_markers_trajectories = QtGui.QPushButton('Dump markers Trajectories')
+		self.dump_markers_trajectories = QtWidgets.QPushButton('Dump markers Trajectories')
 		self.dump_markers_trajectories.clicked.connect(self.write_markers_trajectories)
 
-		self.layout.addWidget(QtGui.QLabel("Motions: "), 0, 0, QtCore.Qt.AlignTop)
-		self.layout.addWidget(self.motion_name_list, 1, 0, QtCore.Qt.AlignTop)
+		self.layout.addWidget(QtWidgets.QLabel("Motions: "), 0, 0, QtCore.Qt.AlignmentFlag.AlignTop)
+		self.layout.addWidget(self.motion_name_list, 1, 0, QtCore.Qt.AlignmentFlag.AlignTop)
 		self.layout.addWidget(self.persp_plot, 0, 1, -1, 3)
 		self.layout.addWidget(self.time_slider, 0, 4, -1, 1)
 		self.layout.addWidget(self.time_box, 1, 4, 1, 1)
-		self.layout.addWidget(self.time_series_plot,0, 5, -1, 2, QtCore.Qt.AlignTop)
+		self.layout.addWidget(self.time_series_plot,0, 5, -1, 2, QtCore.Qt.AlignmentFlag.AlignTop)
 
-		self.layout.addWidget(self.show_bones_buttons, 4, 0, QtCore.Qt.AlignTop)
-		self.layout.addWidget(self.derivative_button, 5, 0, QtCore.Qt.AlignTop)
-		self.layout.addWidget(self.kf_button, 6, 0, QtCore.Qt.AlignTop)
-		self.layout.addWidget(self.clamp_s_button, 7, 0, QtCore.Qt.AlignTop)
-		self.layout.addWidget(self.clamp_e_button, 8, 0, QtCore.Qt.AlignTop)
-		self.layout.addWidget(self.remove_markers_button, 9, 0, QtCore.Qt.AlignTop)
-		self.layout.addWidget(QtGui.QLabel("Trail_Size: "), 10, 0, QtCore.Qt.AlignTop)
-		self.layout.addWidget(self.trail_length_box, 11, 0, QtCore.Qt.AlignTop)
-		self.layout.addWidget(QtGui.QLabel("Markers: "), 12, 0, QtCore.Qt.AlignTop)
-		self.layout.addWidget(self.markers_list, 13, 0, QtCore.Qt.AlignTop)
-		self.layout.addWidget(self.split_motions_button, 14, 0, QtCore.Qt.AlignTop)
-		self.layout.addWidget(self.spit_out_twist_button, 15, 0, QtCore.Qt.AlignTop)
-		self.layout.addWidget(self.dump_markers_trajectories, 16, 0, QtCore.Qt.AlignTop)
-		verticalSpacer = QtGui.QSpacerItem(100, 1000, QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Expanding)
-		self.layout.addItem(verticalSpacer, 17, 0, QtCore.Qt.AlignTop)
+		self.layout.addWidget(self.show_bones_buttons, 4, 0, QtCore.Qt.AlignmentFlag.AlignTop)
+		self.layout.addWidget(self.derivative_button, 5, 0, QtCore.Qt.AlignmentFlag.AlignTop)
+		self.layout.addWidget(self.kf_button, 6, 0, QtCore.Qt.AlignmentFlag.AlignTop)
+		self.layout.addWidget(self.clamp_s_button, 7, 0, QtCore.Qt.AlignmentFlag.AlignTop)
+		self.layout.addWidget(self.clamp_e_button, 8, 0, QtCore.Qt.AlignmentFlag.AlignTop)
+		self.layout.addWidget(self.remove_markers_button, 9, 0, QtCore.Qt.AlignmentFlag.AlignTop)
+		self.layout.addWidget(QtWidgets.QLabel("Trail_Size: "), 10, 0, QtCore.Qt.AlignmentFlag.AlignTop)
+		self.layout.addWidget(self.trail_length_box, 11, 0, QtCore.Qt.AlignmentFlag.AlignTop)
+		self.layout.addWidget(QtWidgets.QLabel("Markers: "), 12, 0, QtCore.Qt.AlignmentFlag.AlignTop)
+		self.layout.addWidget(self.markers_list, 13, 0, QtCore.Qt.AlignmentFlag.AlignTop)
+		self.layout.addWidget(self.split_motions_button, 14, 0, QtCore.Qt.AlignmentFlag.AlignTop)
+		self.layout.addWidget(self.spit_out_twist_button, 15, 0, QtCore.Qt.AlignmentFlag.AlignTop)
+		self.layout.addWidget(self.dump_markers_trajectories, 16, 0, QtCore.Qt.AlignmentFlag.AlignTop)
+		verticalSpacer = QtWidgets.QSpacerItem(100, 1000, QtWidgets.QSizePolicy.Policy.Minimum, QtWidgets.QSizePolicy.Policy.Expanding)
+		self.layout.addItem(verticalSpacer, 17, 0, QtCore.Qt.AlignmentFlag.AlignTop)
 
 		self.setLayout(self.layout)
 
@@ -467,8 +466,8 @@ class MotionEditionWidget(QtGui.QWidget):
 
 		for t in self.motions_db.motions:
 			i += 1
-			li = QtGui.QListWidgetItem()
-			li.setFlags(li.flags() | QtCore.Qt.ItemIsEditable)
+			li = QtWidgets.QListWidgetItem()
+			li.setFlags(li.flags() | QtCore.Qt.ItemFlag.ItemIsEditable)
 			li.setText(t.name)
 			self.motion_name_list.insertItem(i, li)
 
@@ -549,7 +548,7 @@ class MotionEditionWidget(QtGui.QWidget):
 			self.markers_list.clear()
 			for m_name in motion.markers:
 				i += 1
-				li = QtGui.QListWidgetItem()
+				li = QtWidgets.QListWidgetItem()
 				li.setText(m_name)
 				self.markers_list.insertItem(i, li)
 
@@ -617,7 +616,7 @@ class MotionEditionWidget(QtGui.QWidget):
 			self.print_c("Created file: " + filename)
 
 
-class TrajectoryAnalysisWidget(QtGui.QWidget):
+class TrajectoryAnalysisWidget(QtWidgets.QWidget):
 	def __init__(self):
 
 		super(TrajectoryAnalysisWidget, self).__init__()
@@ -634,18 +633,18 @@ class TrajectoryAnalysisWidget(QtGui.QWidget):
 
 		self.derivative_mode = 0
 
-		self.traj_list_ref = QtGui.QListWidget()
+		self.traj_list_ref = QtWidgets.QListWidget()
 		self.traj_list_ref.currentItemChanged.connect(self.list_change_event)
 
 		self.persp_plot = pggl.GLViewWidget()
 		self.persp_plot_items = []
 
-		self.trail_length_box = QtGui.QSpinBox()
+		self.trail_length_box = QtWidgets.QSpinBox()
 		self.trail_length_box.setValue(20)
 		self.trail_length_box.setMinimum(1)
 		self.trail_length_box.valueChanged.connect(self.trail_length_box_changed)
 
-		self.n_components_box = QtGui.QSpinBox()
+		self.n_components_box = QtWidgets.QSpinBox()
 		self.n_components_box.setValue(20)
 		self.n_components_box.setMinimum(1)
 
@@ -656,36 +655,36 @@ class TrajectoryAnalysisWidget(QtGui.QWidget):
 		self.persp_plot.addItem(ygrid)
 		self.persp_plot.addItem(zgrid)
 
-		self.time_slider = QtGui.QSlider()
-		self.time_slider.setOrientation(QtCore.Qt.Vertical)
-		self.time_slider.setTickPosition(QtGui.QSlider.TicksAbove)
+		self.time_slider = QtWidgets.QSlider()
+		self.time_slider.setOrientation(QtCore.Qt.Orientation.Vertical)
+		self.time_slider.setTickPosition(QtWidgets.QSlider.TickPosition.TicksAbove)
 		self.time_slider.valueChanged.connect(self.refresh_presp_plot)
 
 		self.pcs_plot = pg.PlotWidget()
 		self.pcs_plot.addLegend()
 
-		self.layout = QtGui.QGridLayout()
+		self.layout = QtWidgets.QGridLayout()
 
-		self.derivative_button = QtGui.QPushButton('Saliency')
+		self.derivative_button = QtWidgets.QPushButton('Saliency')
 		self.derivative_button.clicked.connect(self.saliency_matching_showcase)
 
-		self.compute_pca_button = QtGui.QPushButton('Compute PCA space')
+		self.compute_pca_button = QtWidgets.QPushButton('Compute PCA space')
 		self.compute_pca_button.clicked.connect(self.compute_pca_clicked)
 
-		self.layout.addWidget(QtGui.QLabel("Motions: "), 0, 0, QtCore.Qt.AlignTop)
-		self.layout.addWidget(self.traj_list_ref, 1, 0, QtCore.Qt.AlignTop)
+		self.layout.addWidget(QtWidgets.QLabel("Motions: "), 0, 0, QtCore.Qt.AlignmentFlag.AlignTop)
+		self.layout.addWidget(self.traj_list_ref, 1, 0, QtCore.Qt.AlignmentFlag.AlignTop)
 		self.layout.addWidget(self.persp_plot, 0, 1, -1, 3)
 		self.layout.addWidget(self.time_slider, 0, 4, -1, 1)
 		self.layout.addWidget(self.pcs_plot, 0, 5, -1, 2)
 
-		self.layout.addWidget(self.derivative_button, 4, 0, QtCore.Qt.AlignTop)
-		self.layout.addWidget(self.compute_pca_button, 5, 0, QtCore.Qt.AlignTop)
-		self.layout.addWidget(QtGui.QLabel("Trail_Size: "), 8, 0, QtCore.Qt.AlignTop)
-		self.layout.addWidget(self.trail_length_box, 9, 0, QtCore.Qt.AlignTop)
-		self.layout.addWidget(QtGui.QLabel("# components: "), 10, 0, QtCore.Qt.AlignTop)
-		self.layout.addWidget(self.n_components_box, 11, 0, QtCore.Qt.AlignTop)
-		verticalSpacer = QtGui.QSpacerItem(100, 1000, QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Expanding)
-		self.layout.addItem(verticalSpacer, 12, 0, QtCore.Qt.AlignTop)
+		self.layout.addWidget(self.derivative_button, 4, 0, QtCore.Qt.AlignmentFlag.AlignTop)
+		self.layout.addWidget(self.compute_pca_button, 5, 0, QtCore.Qt.AlignmentFlag.AlignTop)
+		self.layout.addWidget(QtWidgets.QLabel("Trail_Size: "), 8, 0, QtCore.Qt.AlignmentFlag.AlignTop)
+		self.layout.addWidget(self.trail_length_box, 9, 0, QtCore.Qt.AlignmentFlag.AlignTop)
+		self.layout.addWidget(QtWidgets.QLabel("# components: "), 10, 0, QtCore.Qt.AlignmentFlag.AlignTop)
+		self.layout.addWidget(self.n_components_box, 11, 0, QtCore.Qt.AlignmentFlag.AlignTop)
+		verticalSpacer = QtWidgets.QSpacerItem(100, 1000, QtWidgets.QSizePolicy.Policy.Minimum, QtWidgets.QSizePolicy.Policy.Expanding)
+		self.layout.addItem(verticalSpacer, 12, 0, QtCore.Qt.AlignmentFlag.AlignTop)
 
 		self.setLayout(self.layout)
 
@@ -842,7 +841,7 @@ class TrajectoryAnalysisWidget(QtGui.QWidget):
 		self.traj_list_ref.clear()
 		for t in self.motions_db.motions:
 			i += 1
-			li = QtGui.QListWidgetItem()
+			li = QtWidgets.QListWidgetItem()
 			li.setText(t.name)
 			self.traj_list_ref.insertItem(i, li)
 
@@ -867,7 +866,7 @@ class TrajectoryAnalysisWidget(QtGui.QWidget):
 		self.refresh_presp_plot()
 
 
-class TrajectoryPredictionWidget(QtGui.QWidget):
+class TrajectoryPredictionWidget(QtWidgets.QWidget):
 	def __init__(self):
 
 		self.col = -1
@@ -888,10 +887,10 @@ class TrajectoryPredictionWidget(QtGui.QWidget):
 		self.lastTimeSpacePressed = time.time()
 		self.latest_computed_warp = []
 
-		self.traj_list_ref = QtGui.QListWidget()
+		self.traj_list_ref = QtWidgets.QListWidget()
 		self.traj_list_ref.currentItemChanged.connect(self.list_change_event)
 
-		self.traj_list_reg = QtGui.QListWidget()
+		self.traj_list_reg = QtWidgets.QListWidget()
 		self.traj_list_reg.currentItemChanged.connect(self.list_change_event)
 
 		self.left_plot_view = pggl.GLViewWidget()
@@ -910,35 +909,35 @@ class TrajectoryPredictionWidget(QtGui.QWidget):
 		self.right_plot_view.addItem(ygrid)
 		self.right_plot_view.addItem(zgrid)
 
-		self.layout = QtGui.QGridLayout()
+		self.layout = QtWidgets.QGridLayout()
 
-		self.dtw_reg_button = QtGui.QPushButton('DTW Warp')
+		self.dtw_reg_button = QtWidgets.QPushButton('DTW Warp')
 		self.dtw_reg_button.pressed.connect(self.dtw_registration_showcase)#dtw_registration_showcasegreedy_registration_showcase)
 
-		self.pred_one_one_button = QtGui.QPushButton('Prediction 1v1 showcase')
+		self.pred_one_one_button = QtWidgets.QPushButton('Prediction 1v1 showcase')
 		self.pred_one_one_button.pressed.connect(self.prediction_one_on_one)
 
-		self.new_test = QtGui.QPushButton('Dont click')
+		self.new_test = QtWidgets.QPushButton('Dont click')
 		#self.new_test.pressed.connect(self.saliency_matching_showcase)
 
-		self.kal_pred_button = QtGui.QPushButton('Regular Kalman')
+		self.kal_pred_button = QtWidgets.QPushButton('Regular Kalman')
 		self.kal_pred_button.pressed.connect(self.regular_kalman_prediction)
 
-		self.time_slider = QtGui.QSlider()
+		self.time_slider = QtWidgets.QSlider()
 
-		self.layout.addWidget(QtGui.QLabel("Reference Motions: "), 0, 0, QtCore.Qt.AlignTop)
-		self.layout.addWidget(self.traj_list_ref, 1, 0, QtCore.Qt.AlignTop)
-		self.layout.addWidget(self.pred_one_one_button, 5, 0, QtCore.Qt.AlignTop)
-		self.layout.addWidget(self.new_test, 6, 0, QtCore.Qt.AlignTop)
-		self.layout.addWidget(self.dtw_reg_button, 7, 0, QtCore.Qt.AlignTop)
-		self.layout.addWidget(self.kal_pred_button, 8, 0, QtCore.Qt.AlignTop)
-		self.layout.addWidget(QtGui.QLabel("Register Motion: "), 9, 0, QtCore.Qt.AlignTop)
-		self.layout.addWidget(self.traj_list_reg, 10, 0, QtCore.Qt.AlignTop)
+		self.layout.addWidget(QtWidgets.QLabel("Reference Motions: "), 0, 0, QtCore.Qt.AlignmentFlag.AlignTop)
+		self.layout.addWidget(self.traj_list_ref, 1, 0, QtCore.Qt.AlignmentFlag.AlignTop)
+		self.layout.addWidget(self.pred_one_one_button, 5, 0, QtCore.Qt.AlignmentFlag.AlignTop)
+		self.layout.addWidget(self.new_test, 6, 0, QtCore.Qt.AlignmentFlag.AlignTop)
+		self.layout.addWidget(self.dtw_reg_button, 7, 0, QtCore.Qt.AlignmentFlag.AlignTop)
+		self.layout.addWidget(self.kal_pred_button, 8, 0, QtCore.Qt.AlignmentFlag.AlignTop)
+		self.layout.addWidget(QtWidgets.QLabel("Register Motion: "), 9, 0, QtCore.Qt.AlignmentFlag.AlignTop)
+		self.layout.addWidget(self.traj_list_reg, 10, 0, QtCore.Qt.AlignmentFlag.AlignTop)
 		self.layout.addWidget(self.left_plot_view, 0, 1, -1, 1)
 		self.layout.addWidget(self.right_plot_view, 0, 2, -1, 1)
 
-		verticalSpacer = QtGui.QSpacerItem(100, 3000, QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Expanding)
-		self.layout.addItem(verticalSpacer, 9, 0, QtCore.Qt.AlignTop)
+		verticalSpacer = QtWidgets.QSpacerItem(100, 3000, QtWidgets.QSizePolicy.Policy.Minimum, QtWidgets.QSizePolicy.Policy.Expanding)
+		self.layout.addItem(verticalSpacer, 9, 0, QtCore.Qt.AlignmentFlag.AlignTop)
 
 		self.setLayout(self.layout)
 
@@ -1503,9 +1502,9 @@ class TrajectoryPredictionWidget(QtGui.QWidget):
 		self.traj_list_ref.clear()
 		for t in self.motions_db.motions:
 			i += 1
-			li1 = QtGui.QListWidgetItem()
+			li1 = QtWidgets.QListWidgetItem()
 			li1.setText(t.name)
-			li2 = QtGui.QListWidgetItem()
+			li2 = QtWidgets.QListWidgetItem()
 			li2.setText(t.name)
 			self.traj_list_ref.insertItem(i, li1)
 			self.traj_list_reg.insertItem(i, li2)
@@ -1519,7 +1518,7 @@ class TrajectoryPredictionWidget(QtGui.QWidget):
 		self.refresh_traj_list()
 
 
-class TwistMatchingWidget(QtGui.QWidget):
+class TwistMatchingWidget(QtWidgets.QWidget):
 	def __init__(self):
 
 		self.col = -1
@@ -1544,31 +1543,31 @@ class TwistMatchingWidget(QtGui.QWidget):
 
 		self.warp_type = "nothing"
 
-		self.time_slider = QtGui.QSlider()
-		self.time_slider.setOrientation(QtCore.Qt.Vertical)
-		self.time_slider.setTickPosition(QtGui.QSlider.TicksAbove)
+		self.time_slider = QtWidgets.QSlider()
+		self.time_slider.setOrientation(QtCore.Qt.Orientation.Vertical)
+		self.time_slider.setTickPosition(QtWidgets.QSlider.TickPosition.TicksAbove)
 		self.time_slider.valueChanged.connect(self.slider_moved)
 
-		self.traj_list_ref = QtGui.QListWidget()
+		self.traj_list_ref = QtWidgets.QListWidget()
 		self.traj_list_ref.currentItemChanged.connect(self.list_change_event)
 
-		self.traj_list_reg = QtGui.QListWidget()
+		self.traj_list_reg = QtWidgets.QListWidget()
 		self.traj_list_reg.currentItemChanged.connect(self.list_change_event)
 
-		self.markers_list = QtGui.QListWidget()
+		self.markers_list = QtWidgets.QListWidget()
 		self.markers_list.currentItemChanged.connect(self.markers_list_change_event)
 		self.markers_list.setMaximumWidth(200)
 
-		self.simple_twist_button = QtGui.QPushButton('Single Twists Warp')
+		self.simple_twist_button = QtWidgets.QPushButton('Single Twists Warp')
 		self.simple_twist_button.clicked.connect(self.simple_twists_button_event)
 
-		self.n_squared_twists_button = QtGui.QPushButton('n^2 Twists Warp')
+		self.n_squared_twists_button = QtWidgets.QPushButton('n^2 Twists Warp')
 		self.n_squared_twists_button.clicked.connect(self.n_squared_twists_button_event)
 
-		self.simple_markers_button = QtGui.QPushButton('Simpler markers Warp')
+		self.simple_markers_button = QtWidgets.QPushButton('Simpler markers Warp')
 		self.simple_markers_button.clicked.connect(self.simple_markers_button_event)
 
-		self.n_squared_markers_button = QtGui.QPushButton('n^2 markers Warp')
+		self.n_squared_markers_button = QtWidgets.QPushButton('n^2 markers Warp')
 		self.n_squared_markers_button.clicked.connect(self.n_squared_markers_button_event)
 
 		self.left_plot_view = pggl.GLViewWidget()
@@ -1587,25 +1586,25 @@ class TwistMatchingWidget(QtGui.QWidget):
 		self.right_plot_view.addItem(ygrid)
 		self.right_plot_view.addItem(zgrid)
 
-		self.layout = QtGui.QGridLayout()
+		self.layout = QtWidgets.QGridLayout()
 
-		self.layout.addWidget(QtGui.QLabel("Reference Motions: "), 0, 0, QtCore.Qt.AlignTop)
-		self.layout.addWidget(self.traj_list_ref, 1, 0, QtCore.Qt.AlignTop)
-		self.layout.addWidget(self.simple_twist_button, 2, 0, QtCore.Qt.AlignTop)
-		self.layout.addWidget(self.n_squared_twists_button, 3, 0, QtCore.Qt.AlignTop)
-		self.layout.addWidget(self.simple_markers_button, 4, 0, QtCore.Qt.AlignTop)
-		self.layout.addWidget(self.n_squared_markers_button, 5, 0, QtCore.Qt.AlignTop)
-		self.layout.addWidget(QtGui.QLabel("Register Motion: "), 9, 0, QtCore.Qt.AlignTop)
-		self.layout.addWidget(self.traj_list_reg, 10, 0, QtCore.Qt.AlignTop)
-		self.layout.addWidget(QtGui.QLabel("Rigid Parts: "), 11, 0, QtCore.Qt.AlignTop)
-		self.layout.addWidget(self.markers_list, 12, 0, QtCore.Qt.AlignTop)
+		self.layout.addWidget(QtWidgets.QLabel("Reference Motions: "), 0, 0, QtCore.Qt.AlignmentFlag.AlignTop)
+		self.layout.addWidget(self.traj_list_ref, 1, 0, QtCore.Qt.AlignmentFlag.AlignTop)
+		self.layout.addWidget(self.simple_twist_button, 2, 0, QtCore.Qt.AlignmentFlag.AlignTop)
+		self.layout.addWidget(self.n_squared_twists_button, 3, 0, QtCore.Qt.AlignmentFlag.AlignTop)
+		self.layout.addWidget(self.simple_markers_button, 4, 0, QtCore.Qt.AlignmentFlag.AlignTop)
+		self.layout.addWidget(self.n_squared_markers_button, 5, 0, QtCore.Qt.AlignmentFlag.AlignTop)
+		self.layout.addWidget(QtWidgets.QLabel("Register Motion: "), 9, 0, QtCore.Qt.AlignmentFlag.AlignTop)
+		self.layout.addWidget(self.traj_list_reg, 10, 0, QtCore.Qt.AlignmentFlag.AlignTop)
+		self.layout.addWidget(QtWidgets.QLabel("Rigid Parts: "), 11, 0, QtCore.Qt.AlignmentFlag.AlignTop)
+		self.layout.addWidget(self.markers_list, 12, 0, QtCore.Qt.AlignmentFlag.AlignTop)
 		self.layout.addWidget(self.left_plot_view, 0, 1, -1, 1)
 		self.layout.addWidget(self.time_slider, 0, 2, -1, 1)
 		self.layout.addWidget(self.right_plot_view, 0, 3, -1, 1)
 
 
-		verticalSpacer = QtGui.QSpacerItem(100, 3000, QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Expanding)
-		self.layout.addItem(verticalSpacer, 9, 0, QtCore.Qt.AlignTop)
+		verticalSpacer = QtWidgets.QSpacerItem(100, 3000, QtWidgets.QSizePolicy.Policy.Minimum, QtWidgets.QSizePolicy.Policy.Expanding)
+		self.layout.addItem(verticalSpacer, 9, 0, QtCore.Qt.AlignmentFlag.AlignTop)
 
 		self.setLayout(self.layout)
 
@@ -1678,9 +1677,9 @@ class TwistMatchingWidget(QtGui.QWidget):
 		self.traj_list_ref.clear()
 		for t in self.motions_db.motions:
 			i += 1
-			li1 = QtGui.QListWidgetItem()
+			li1 = QtWidgets.QListWidgetItem()
 			li1.setText(t.name)
-			li2 = QtGui.QListWidgetItem()
+			li2 = QtWidgets.QListWidgetItem()
 			li2.setText(t.name)
 			self.traj_list_ref.insertItem(i, li1)
 			self.traj_list_reg.insertItem(i, li2)
@@ -1701,7 +1700,7 @@ class TwistMatchingWidget(QtGui.QWidget):
 			self.markers_list.clear()
 			for m_name in motion.markers:
 				i += 1
-				li = QtGui.QListWidgetItem()
+				li = QtWidgets.QListWidgetItem()
 				li.setText(m_name)
 				self.markers_list.insertItem(i, li)
 
@@ -1880,28 +1879,28 @@ class GuiApp(object):
 		self.twist_widget = None
 
 		# Always start by initializing Qt (only once per application)
-		self.app = QtGui.QApplication([])
+		self.app = QtWidgets.QApplication([])
 		# Define a top-level widget to hold everything
-		self.window = QtGui.QMainWindow()
+		self.window = QtWidgets.QMainWindow()
 		self.app.setActiveWindow(self.window)
 		self.window.resize(1280, 720)
 
 		self.window.setWindowTitle("Motion Modeling Editor")
 
-		self.widget = QtGui.QWidget()
+		self.widget = QtWidgets.QWidget()
 
 		# Create main menu
 		self.setup_menu()
 
-		self.consoleText = QtGui.QTextEdit()
+		self.consoleText = QtWidgets.QTextEdit()
 		self.consoleText.setText("Console Output Below:\n")
 		self.consoleText.setReadOnly(True)
 		self.consoleText.setMaximumHeight(200)
 
-		self.layout = QtGui.QGridLayout()
+		self.layout = QtWidgets.QGridLayout()
 		self.widget.setLayout(self.layout)
 
-		self.layout.addWidget(self.consoleText, 1, 0, 1, -1, QtCore.Qt.AlignBottom)
+		self.layout.addWidget(self.consoleText, 1, 0, 1, -1, QtCore.Qt.AlignmentFlag.AlignBottom)
 
 		self.window.setCentralWidget(self.widget)
 		self.window.show()
@@ -2005,7 +2004,7 @@ class GuiApp(object):
 			self.motion_edit_widget.refresh_all()
 			col = self.assign_col()
 			self.motion_edit_widget.col = col
-			self.layout.addWidget(self.motion_edit_widget, 0, col, 1, 1, QtCore.Qt.AlignTop)
+			self.layout.addWidget(self.motion_edit_widget, 0, col, 1, 1, QtCore.Qt.AlignmentFlag.AlignTop)
 
 		else:
 			self.columns[self.motion_edit_widget.col] = False
@@ -2086,16 +2085,16 @@ class GuiApp(object):
 			self.compute_eigen_widget.refresh_button()
 
 	def load_motions(self):
-		file_selection = QtGui.QFileDialog()
-		file_selection.setAcceptMode(file_selection.AcceptOpen)
-		file_selection.setFileMode(file_selection.ExistingFiles)
+		file_selection = QtWidgets.QFileDialog()
+		file_selection.setAcceptMode(QtWidgets.QFileDialog.AcceptMode.AcceptOpen)
+		file_selection.setFileMode(QtWidgets.QFileDialog.FileMode.ExistingFiles)
 		file_selection.setNameFilters(["Mocap C3D (*" + ".c3d" + ")","Mocap C3D ASCII (*" + ".c3dtxt" + ")","Mocap BVH (*" + ".bvh" + ")"])
 		file_selection.show()
 
 		if file_selection.exec_():
-			fileNames = file_selection.selectedFiles()
+			filenames = file_selection.selectedFiles()
 
-			for f in fileNames:
+			for f in filenames:
 				path = "/".join(f.split("/")[:-1])
 				if "txt" == f.split(".")[-1]:
 					self.motions_db.load_c3dtxt(path, f.split("/")[-1])
@@ -2114,9 +2113,9 @@ class GuiApp(object):
 		self.refresh_all_widgets()
 
 	def save_motions_db_as(self):
-		file_selection = QtGui.QFileDialog()
-		file_selection.setAcceptMode(file_selection.AcceptSave)
-		file_selection.setFileMode(file_selection.AnyFile)
+		file_selection = QtWidgets.QFileDialog()
+		file_selection.setAcceptMode(QtWidgets.QFileDialog.AcceptMode.AcceptSave)
+		file_selection.setFileMode(QtWidgets.QFileDialog.FileMode.AnyFile)
 		file_selection.setNameFilters(["Motion Database (*" + DB_FILE_EXTENSION + ")"])
 		file_selection.show()
 		self.motions_db.dbFilename = ""
@@ -2154,9 +2153,9 @@ class GuiApp(object):
 
 	def import_motion_db(self):
 		filename = ""
-		file_selection = QtGui.QFileDialog()
-		file_selection.setAcceptMode(file_selection.AcceptOpen)
-		file_selection.setFileMode(file_selection.ExistingFile)
+		file_selection = QtWidgets.QFileDialog()
+		file_selection.setAcceptMode(QtWidgets.QFileDialog.AcceptMode.AcceptOpen)
+		file_selection.setFileMode(QtWidgets.QFileDialog.FileMode.ExistingFiles)
 		file_selection.setNameFilters(["Motion Database (*" + DB_FILE_EXTENSION + ")"])
 		file_selection.show()
 
